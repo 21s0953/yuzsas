@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARY - メアリ姫の奪還 (Web再現版)</title>
+<style>
+  :root {
+    --bg: #111319;
+    --panel: #1c202b;
+    --border: #3d465c;
+    --accent: #f0b90b;
+    --danger: #ff4d4f;
+    --heal: #52c41a;
+    --text: #f0f2f5;
+    --sub: #9aa5b1;
+  }
+  * { box-sizing: border-box; font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .container {
+    width: 100%;
+    max-width: 720px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  h1 {
+    font-size: 1.25rem;
+    margin: 0;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    font-weight: bold;
+    font-size: 0.95rem;
+  }
+  .hp-val { color: var(--heal); }
+  .hp-val.low { color: var(--danger); }
+  .scene-box {
+    background: #141720;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 20px;
+    min-height: 120px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .scene-title {
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-size: 1.05rem;
+  }
+  .log-box {
+    background: #0d0f14;
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    display: none;
+  }
+  .command-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .command-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #252b3b;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .word-builder {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  .char-tile {
+    background: #141720;
+    border: 1px solid #55607a;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .char-tile.inserted {
+    background: #3b2e06;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .slot-btn {
+    background: transparent;
+    color: var(--sub);
+    border: 1px dashed #55607a;
+    border-radius: 4px;
+    width: 24px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: 0.15s;
+  }
+  .slot-btn:hover {
+    background: var(--accent);
+    color: #000;
+    border-style: solid;
+  }
+  .action-btns {
+    display: flex;
+    gap: 8px;
+  }
+  button.exec-btn {
+    background: var(--accent);
+    color: #111;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  button.exec-btn:hover { opacity: 0.9; }
+  button.reset-btn {
+    background: #3d465c;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .ending-panel {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  .ending-panel h2 {
+    font-size: 0.95rem;
+    color: var(--sub);
+    margin: 0 0 10px 0;
+  }
+  .ending-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ed-tag {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #141720;
+    border: 1px solid #333;
+    color: #666;
+  }
+  .ed-tag.unlocked {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #2b230a;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>MARY - メアリ姫の奪還 (Web再現版)</h1>
+    <div class="status-bar">
+      <div>勇者HP: <span id="hp-display" class="hp-val">100</span> / 100</div>
+      <div>ED回収: <span id="ed-count">0</span> / 8</div>
+    </div>
+  </header>
+
+  <div id="log-box" class="log-box"></div>
+
+  <div class="scene-box">
+    <div id="scene-title" class="scene-title"></div>
+    <div id="scene-desc"></div>
+  </div>
+
+  <div id="command-area" class="command-list"></div>
+
+  <div class="ending-panel">
+    <h2>エンディング図鑑（ブラウザに自動保存されます）</h2>
+    <div id="ending-list" class="ending-tags"></div>
+  </div>
+</div>
+
+<script>
+const ALL_ENDINGS = [
+  "ED0: 体力切れの末路",
+  "ED1: 賢明なる撤退",
+  "ED2: 帰宅の魔法",
+  "ED3: 芽生えた友情",
+  "ED4: 暗黒の勇者",
+  "ED5: 商魂たくましき勇者",
+  "ED6: 姫の逆襲",
+  "TRUE END: 言葉の勇者"
+];
+const SCENES = {
+  PROLOGUE: {
+    title: "第1幕：魔王城の正門",
+    desc: "メアリ姫が囚われている魔王城の前に着いた。\n巨大な鉄の門が固く閉ざされている。どうする？（文字の間の「+」を押すと1文字挿入できます）",
+    commands: ["門を叩く", "兵と戦う", "帰る"],
+    outcomes: {
+      "門を叩く": { msg: "ドン！ドン！…音が響き渡り、上から熱湯を浴びせられた！", hp: -40, next: "PROLOGUE" },
+      "門を開ける": { msg: "なんと鍵がかかっていなかった！勇者は堂々と城内へ侵入した！", hp: 0, next: "CASTLE_HALL" },
+      "門を壊す": { msg: "勇者の怪力で鉄の門を粉砕！派手な音に驚いて門番は逃げ出した！", hp: -10, next: "CASTLE_HALL" },
+      "兵と戦う": { msg: "門番のダークナイトは強すぎた！一撃で吹き飛ばされた。", hp: -100, next: null },
+      "兵と和む": { msg: "世間話を始めたら意気投合し、裏口からこっそり通してもらえた！", hp: 20, next: "CASTLE_HALL" },
+      "帰る": { msg: "勇者は使命を放棄して故郷の村へ帰った。平和な日常が戻った（？）。", hp: 0, ed: "ED1: 賢明なる撤退" },
+      "帰れる": { msg: "「帰れる」と確信した瞬間、転移魔法が発動して実家の布団に戻った。", hp: 0, ed: "ED2: 帰宅の魔法" }
+    }
+  },
+  CASTLE_HALL: {
+    title: "第2幕：魔王の玉座",
+    desc: "最上階にたどり着いた！\n玉座には魔王が座り、その隣には檻に入れられたメアリ姫がいる。\n魔王「よくぞ来た勇者よ！さあ、決着をつけよう！」",
+    commands: ["魔王を斬る", "姫を救う", "剣を捨てる"],
+    outcomes: {
+      "魔王を斬る": { msg: "魔王のバリアに弾かれた！反撃のダークフレアを浴びる！", hp: -60, next: "CASTLE_HALL" },
+      "魔王を斬れる": { msg: "「斬れる」という強い思い込みが聖剣の力を覚醒させた！魔王を一刀両断し、メアリ姫を救出した！", hp: 0, ed: "TRUE END: 言葉の勇者" },
+      "魔王と斬る": { msg: "魔王と共闘して背後から迫っていた真の黒幕を撃破！世界は救われた！", hp: 0, ed: "ED3: 芽生えた友情" },
+      "姫を救う": { msg: "檻に近づいた瞬間、魔王の背後からの不意打ちを食らった！", hp: -70, next: "CASTLE_HALL" },
+      "姫を殺す": { msg: "なんてことを！勇者は闇落ちし、新たな魔王として君臨した……。", hp: 0, ed: "ED4: 暗黒の勇者" },
+      "姫が救う": { msg: "檻を自力で破壊したメアリ姫が魔王をワンパンで撃破！勇者はお姫様抱っこで帰還した。", hp: 0, ed: "ED6: 姫の逆襲" },
+      "剣を捨てる": { msg: "丸腰になった勇者を見て、魔王は呆れながらトドメを刺した。", hp: -100, next: null },
+      "剣を売る": { msg: "戦闘中に武器屋を呼び出し、聖剣を100万Gで売却！大富豪になった勇者は姫を置いて旅に出た。", hp: 0, ed: "ED5: 商魂たくましき勇者" }
+    }
+  }
+};
+
+let hp = 100;
+let currentSceneId = "PROLOGUE";
+let isGameOver = false;
+let unlockedEndings = JSON.parse(localStorage.getItem("mary_clone_eds") || "[]");
+let cmdStates = [];
+
+function initGame() {
+  hp = 100;
+  currentSceneId = "PROLOGUE";
+  isGameOver = false;
+  document.getElementById("log-box").style.display = "none";
+  loadScene(currentSceneId);
+  renderEndings();
+}
+
+function loadScene(sceneId) {
+  const scene = SCENES[sceneId];
+  document.getElementById("scene-title").textContent = scene.title;
+  document.getElementById("scene-desc").textContent = scene.desc;
+  updateHpDisplay();
+
+  cmdStates = scene.commands.map(base => ({
+    base: base,
+    insertPos: -1,
+    insertChar: ""
+  }));
+
+  renderCommands();
+}
+
+function renderCommands() {
+  const area = document.getElementById("command-area");
+  area.innerHTML = "";
+
+  if (isGameOver) {
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "exec-btn";
+    retryBtn.textContent = "最初からやり直す（別の言葉を試す）";
+    retryBtn.onclick = initGame;
+    area.appendChild(retryBtn);
+    return;
+  }
+
+  cmdStates.forEach((state, cmdIdx) => {
+    const row = document.createElement("div");
+    row.className = "command-row";
+
+    const builder = document.createElement("div");
+    builder.className = "word-builder";
+
+    for (let i = 0; i <= state.base.length; i++) {
+      if (state.insertPos === i) {
+        const insTile = document.createElement("span");
+        insTile.className = "char-tile inserted";
+        insTile.textContent = state.insertChar;
+        insTile.title = "クリックで文字変更";
+        insTile.style.cursor = "pointer";
+        insTile.onclick = () => promptChar(cmdIdx, i);
+        builder.appendChild(insTile);
+      } else if (state.insertPos === -1) {
+        const slot = document.createElement("button");
+        slot.className = "slot-btn";
+        slot.textContent = "+";
+        slot.title = "ここに1文字挿入";
+        slot.onclick = () => promptChar(cmdIdx, i);
+        builder.appendChild(slot);
+      }
+
+      if (i < state.base.length) {
+        const charTile = document.createElement("span");
+        charTile.className = "char-tile";
+        charTile.textContent = state.base[i];
+        builder.appendChild(charTile);
+      }
+    }
+
+    const btnGroup = document.createElement("div");
+    btnGroup.className = "action-btns";
+
+    if (state.insertPos !== -1) {
+      const resetBtn = document.createElement("button");
+      resetBtn.className = "reset-btn";
+      resetBtn.textContent = "戻す";
+      resetBtn.onclick = () => {
+        state.insertPos = -1;
+        state.insertChar = "";
+        renderCommands();
+      };
+      btnGroup.appendChild(resetBtn);
+    }
+
+    const execBtn = document.createElement("button");
+    execBtn.className = "exec-btn";
+    const finalWord = getFinalWord(state);
+    execBtn.textContent = `「\${finalWord}」を実行`;
+    execBtn.onclick = () => executeCommand(finalWord);
+    btnGroup.appendChild(execBtn);
+
+    row.appendChild(builder);
+    row.appendChild(btnGroup);
+    area.appendChild(row);
+  });
+}
+
+function promptChar(cmdIdx, pos) {
+  const input = prompt("挿入する【1文字】を入力してください（例：開、壊、和、れ、売、殺 など）:");
+  if (input && input.trim().length > 0) {
+    cmdStates[cmdIdx].insertPos = pos;
+    cmdStates[cmdIdx].insertChar = Array.from(input.trim())[0];
+    renderCommands();
+  }
+}
+
+function getFinalWord(state) {
+  if (state.insertPos === -1) return state.base;
+  return state.base.slice(0, state.insertPos) + state.insertChar + state.base.slice(state.insertPos);
+}
+
+function executeCommand(word) {
+  const scene = SCENES[currentSceneId];
+  const outcome = scene.outcomes[word];
+  const logBox = document.getElementById("log-box");
+  logBox.style.display = "block";
+
+  if (outcome) {
+    hp = Math.min(100, hp + outcome.hp);
+    updateHpDisplay();
+
+    let hpText = "";
+    if (outcome.hp < 0) hpText = `<br><span style="color:var(--danger)">▶ 勇者は \${-outcome.hp} のダメージを受けた！</span>`;
+    if (outcome.hp > 0) hpText = `<br><span style="color:var(--heal)">▶ 勇者のHPが \${outcome.hp} 回復した！</span>`;
+
+    logBox.innerHTML = `<strong>【\({word}】を実行した！</strong><br>\){outcome.msg}\({hpText}`;  if (hp <= 0) { triggerEnding("ED0: 体力切れの末路", "勇者は力尽きた……。"); } else if (outcome.ed) { triggerEnding(outcome.ed, outcome.msg); } else if (outcome.next) { currentSceneId = outcome.next; loadScene(currentSceneId); } } else { hp -= 25; updateHpDisplay(); logBox.innerHTML = `<strong>【\){word}】を実行した！</strong><br>しかし意味が通じず、世界が困惑している！<br><span style="color:var(--danger)">▶ 隙を突かれて 25 の謎ダメージを受けた！</span>`;
+    if (hp <= 0) {
+      triggerEnding("ED0: 体力切れの末路", "意味不明な言葉をつぶやきながら勇者は倒れた……。");
+    }
+  }
+}
+
+function triggerEnding(edName, finalMsg) {
+  isGameOver = true;
+  const isNew = !unlockedEndings.includes(edName);
+  if (isNew) {
+    unlockedEndings.push(edName);
+    localStorage.setItem("mary_clone_eds", JSON.stringify(unlockedEndings));
+  }
+  document.getElementById("scene-title").textContent = `★ エンディング到達：\({edName}\){isNew ? "【NEW!】" : ""}`;
+  document.getElementById("scene-desc").textContent = finalMsg;
+  renderEndings();
+  renderCommands();
+}
+
+function updateHpDisplay() {
+  const el = document.getElementById("hp-display");
+  el.textContent = Math.max(0, hp);
+  el.className = hp <= 30 ? "hp-val low" : "hp-val";
+}
+
+function renderEndings() {
+  document.getElementById("ed-count").textContent = unlockedEndings.length;
+  const list = document.getElementById("ending-list");
+  list.innerHTML = "";
+  ALL_ENDINGS.forEach(ed => {
+    const tag = document.createElement("span");
+    const unlocked = unlockedEndings.includes(ed);
+    tag.className = "ed-tag" + (unlocked ? " unlocked" : "");
+    tag.textContent = unlocked ? ed : "？？？";
+    list.appendChild(tag);
+  });
+}
+
+initGame();
+</script>
+</body>
+</html>
