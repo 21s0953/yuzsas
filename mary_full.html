@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MARY - メアリ姫の奪還（完全再現・全機能版）</title>
+<title>MARY - メアリ姫の奪還（ドット絵付き完全再現版）</title>
 <style>
-  :root { --bg:#121318; --card:#1c1f29; --line:#383f52; --gold:#f5b800; --cyan:#29b6f6; --red:#ff5252; --txt:#f2f4f8; --sub:#9aa3b2; }
+  :root { --bg:#121318; --card:#1c1f29; --line:#383f52; --gold:#f5b800; --cyan:#29b6f6; --txt:#f2f4f8; --sub:#9aa3b2; }
   * { box-sizing:border-box; font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif; }
   body { background:var(--bg); color:var(--txt); margin:0; padding:16px; display:flex; justify-content:center; }
   .app { width:100%; max-width:720px; background:var(--card); border:2px solid var(--line); border-radius:10px; padding:20px; }
@@ -13,17 +13,20 @@
   .top h1 { margin:0; font-size:1.1rem; color:var(--gold); }
   .stats { display:flex; gap:8px; font-size:0.82rem; font-weight:bold; }
   .badge { background:#121318; border:1px solid var(--line); padding:3px 8px; border-radius:4px; }
-  .box { background:#13161f; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:14px; line-height:1.75; white-space:pre-wrap; }
-  .stitle { color:var(--gold); font-weight:bold; margin-bottom:6px; font-size:1rem; }
+  .art-stage { background:#090b10; border:2px solid var(--line); border-radius:8px; height:180px; margin-bottom:14px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .art-stage svg { height:150px; width:auto; image-rendering:pixelated; }
+  .box { background:#13161f; border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; line-height:1.7; white-space:pre-wrap; }
+  .stitle { color:var(--gold); font-weight:bold; margin-bottom:4px; font-size:1rem; }
   .log { background:#0d0f15; border-left:4px solid var(--gold); padding:10px 14px; margin-bottom:14px; font-size:0.92rem; line-height:1.6; display:none; }
   .cmd-box { background:#242938; border:1px solid var(--line); border-radius:8px; padding:14px; }
-  .hint { font-size:0.8rem; color:var(--sub); margin-bottom:8px; }
-  .slots { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:12px; font-size:1.2rem; font-weight:bold; }
-  .ch { background:#121318; border:1px solid #55607a; padding:5px 10px; border-radius:4px; cursor:pointer; }
-  .ch:hover { border-color:var(--cyan); color:var(--cyan); }
+  .hint { font-size:0.8rem; color:var(--sub); margin-bottom:10px; }
+  .word-row { display:flex; align-items:center; flex-wrap:wrap; margin-bottom:14px; font-size:1.25rem; font-weight:bold; }
+  .ch { background:#121318; border:1px solid #55607a; padding:6px 11px; border-radius:5px; cursor:pointer; transition:0.12s; user-select:none; }
+  .ch:hover { border-color:var(--cyan); color:var(--cyan); transform:translateY(-2px); }
   .ch.mod { background:#3d2f05; border-color:var(--gold); color:var(--gold); }
-  .plus { background:transparent; color:var(--sub); border:1px dashed #55607a; border-radius:4px; width:24px; height:34px; cursor:pointer; }
-  .plus:hover { background:var(--gold); color:#000; border-style:solid; }
+  .gap { width:14px; height:38px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .gap::after { content:""; width:3px; height:22px; background:transparent; border-radius:2px; transition:0.12s; }
+  .gap:hover::after { background:var(--gold); box-shadow:0 0 6px var(--gold); }
   .btns { display:flex; gap:8px; flex-wrap:wrap; }
   button.go { background:var(--gold); color:#111; border:none; border-radius:6px; padding:9px 18px; font-weight:bold; cursor:pointer; font-size:0.95rem; }
   button.sub { background:#383f52; color:#fff; border:none; border-radius:6px; padding:9px 12px; cursor:pointer; font-size:0.85rem; }
@@ -44,6 +47,7 @@
       <span class="badge">ED: <span id="ed-cnt">0</span>/9</span>
     </div>
   </div>
+  <div id="art" class="art-stage"></div>
   <div id="log" class="log"></div>
   <div class="box"><div id="stitle" class="stitle"></div><div id="sdesc"></div></div>
   <div id="cmds"></div>
@@ -54,73 +58,83 @@ const EDS = [
   "ED1: タイトル崩壊", "ED2: 魔王に敗北", "ED3: 疎遠ルート", "ED4: 新たな魔王",
   "ED5: 魔王の仲間", "ED6: 投獄エンド", "ED7: 商人の道", "ED8: 姫の逆襲", "TRUE END: 結婚ルート"
 ];
+const PIXEL_ART = {
+  TITLE: `<svg viewBox="0 0 16 16"><rect x="6" y="1" width="4" height="2" fill="#f5b800"/><rect x="5" y="3" width="6" height="1" fill="#f5b800"/><rect x="5" y="4" width="6" height="4" fill="#ffcc99"/><rect x="6" y="5" width="1" height="1" fill="#111"/><rect x="9" y="5" width="1" height="1" fill="#111"/><rect x="4" y="8" width="8" height="6" fill="#ff6b8b"/><rect x="5" y="14" width="2" height="2" fill="#ffcc99"/><rect x="9" y="14" width="2" height="2" fill="#ffcc99"/></svg>`,
+  KING: `<svg viewBox="0 0 16 16"><rect x="5" y="1" width="6" height="2" fill="#f5b800"/><rect x="5" y="3" width="6" height="4" fill="#ffcc99"/><rect x="6" y="4" width="1" height="1" fill="#111"/><rect x="9" y="4" width="1" height="1" fill="#111"/><rect x="5" y="6" width="6" height="2" fill="#eee"/><rect x="3" y="8" width="10" height="6" fill="#d32f2f"/><rect x="7" y="8" width="2" height="6" fill="#fff"/></svg>`,
+  MONSTER: `<svg viewBox="0 0 16 16"><rect x="3" y="3" width="2" height="2" fill="#4caf50"/><rect x="11" y="3" width="2" height="2" fill="#4caf50"/><rect x="4" y="4" width="8" height="5" fill="#4caf50"/><rect x="5" y="6" width="2" height="1" fill="#ff1744"/><rect x="9" y="6" width="2" height="1" fill="#ff1744"/><rect x="4" y="9" width="8" height="5" fill="#795548"/><rect x="12" y="5" width="2" height="7" fill="#9e9e9e"/></svg>`,
+  VILLAGE: `<svg viewBox="0 0 16 16"><rect x="2" y="4" width="4" height="4" fill="#ffcc99"/><rect x="1" y="8" width="6" height="6" fill="#29b6f6"/><rect x="10" y="4" width="4" height="4" fill="#ffcc99"/><rect x="9" y="8" width="6" height="6" fill="#ff7043"/></svg>`,
+  CHEST: `<svg viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="9" fill="#8d6e63"/><rect x="2" y="7" width="12" height="2" fill="#f5b800"/><rect x="7" y="6" width="2" height="4" fill="#fff"/><rect x="2" y="4" width="2" height="9" fill="#f5b800"/><rect x="12" y="4" width="2" height="9" fill="#f5b800"/></svg>`,
+  SWORD: `<svg viewBox="0 0 16 16"><rect x="11" y="2" width="3" height="3" fill="#29b6f6"/><rect x="9" y="4" width="3" height="3" fill="#29b6f6"/><rect x="7" y="6" width="3" height="3" fill="#29b6f6"/><rect x="4" y="8" width="5" height="2" fill="#f5b800"/><rect x="3" y="10" width="3" height="3" fill="#795548"/><rect x="2" y="12" width="2" height="2" fill="#f5b800"/></svg>`,
+  DEMON: `<svg viewBox="0 0 16 16"><rect x="3" y="1" width="2" height="3" fill="#f5b800"/><rect x="11" y="1" width="2" height="3" fill="#f5b800"/><rect x="4" y="3" width="8" height="5" fill="#7e57c2"/><rect x="5" y="5" width="2" height="1" fill="#ff1744"/><rect x="9" y="5" width="2" height="1" fill="#ff1744"/><rect x="2" y="8" width="12" height="7" fill="#311b92"/><rect x="6" y="8" width="4" height="5" fill="#d32f2f"/></svg>`,
+  HEART: `<svg viewBox="0 0 16 16"><rect x="3" y="3" width="4" height="3" fill="#ff4081"/><rect x="9" y="3" width="4" height="3" fill="#ff4081"/><rect x="2" y="5" width="12" height="4" fill="#ff4081"/><rect x="4" y="9" width="8" height="3" fill="#ff4081"/><rect x="6" y="12" width="4" height="2" fill="#ff4081"/></svg>`,
+  JAIL: `<svg viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" fill="#263238"/><rect x="4" y="1" width="1" height="14" fill="#90a4ae"/><rect x="7" y="1" width="1" height="14" fill="#90a4ae"/><rect x="11" y="1" width="1" height="14" fill="#90a4ae"/></svg>`
+};
+
 const SCENES = {
   TITLE: {
-    title: "TITLE SCREEN",
-    desc: "『MARY - メアリ姫の奪還』\n「+」で1文字追加、または文字をクリックして1文字書き換えられます。",
+    art: "TITLE", title: "TITLE SCREEN",
+    desc: "『MARY - メアリ姫の奪還』\n文字と文字の【間】を押すと1文字追加、【文字】を押すと書き換えできます。",
     cmd: "はじる",
     act: (w) => {
-      if (w === "はじる") return { msg: "勇者は恥ずかしがって赤面した！冒険が始まらない！", stay: true };
-      if (w === "はじめる" || w === "はじまる") return { msg: "冒険の幕が上がった！", next: "S1" };
-      if (w === "はじける") return { msg: "テンションが上がりすぎて弾け飛んだ！", ed: "ED1: タイトル崩壊" };
-      if (w === "はしる") return { msg: "タイトル画面の端まで全力疾走した！", stay: true };
-      if (w === "はじく") return { msg: "指でタイトルロゴを弾き飛ばした！", stay: true };
-      if (w === "かじる") return { msg: "タイトルロゴの角をかじった。少し硬い。", stay: true };
-      return { msg: "「" + w + "」……まだ始まらない！「め」か「ま」を入れてみよう。", stay: true };
+      if (w === "はじる") return { msg: "勇者は恥ずかしがって赤面した！物語が始まらない！", stay: true };
+      if (["はじめる", "はじまる", "始める", "始まる"].includes(w)) return { msg: "冒険の幕が上がった！", next: "S1" };
+      if (["はじける", "弾ける"].includes(w)) return { msg: "テンションが上がりすぎて弾け飛んだ！", ed: "ED1: タイトル崩壊", endArt: "JAIL" };
+      if (["はしる", "走る"].includes(w)) return { msg: "タイトル画面の端まで全力疾走した！", stay: true };
+      return { msg: "「" + w + "」……まだ始まらない！文字の間に「め」か「ま」を入れてみよう。", stay: true };
     }
   },
   S1: {
-    title: "01. 王の間",
-    desc: "王様「勇者よ！魔王にさらわれたメアリ姫を頼んだぞ！」\n（※「喰」をクリックして「救」に書き換えられます）",
+    art: "KING", title: "01. 王の間",
+    desc: "王様「勇者よ！魔王にさらわれたメアリ姫を頼んだぞ！」\n勇者は王様に向かって高らかに宣言した。",
     cmd: "姫を喰いに行きます",
-    act: (w, st) => {
-      if (w === "姫を喰いに行きます") return { msg: "王様「衛兵！この人食い勇者を牢屋にぶち込め！」", ed: "ED6: 投獄エンド" };
-      if (w === "姫を救いに行きます") return { msg: "王様「おお、頼もしい！気をつけて行くのだぞ！」", next: "S2" };
-      if (w === "姫を買いに行きます") return { msg: "王様「娘は売り物ではない！」と怒られたが、なぜか旅費をくれた。", next: "S2" };
-      if (w === "姫を吸いに行きます") return { msg: "王様「変態が紛れ込んでおるぞ！捕らえよ！」", ed: "ED6: 投獄エンド" };
-      if (w === "姫を弔いに行きます") return { msg: "王様「まだ生きておるわ！」と張り倒されたが、城を出発した。", next: "S2" };
-      if (w === "姫を呪いに行きます") return { msg: "王様「魔王よりタチが悪いな！牢に入れろ！」", ed: "ED6: 投獄エンド" };
-      if (w === "俺を喰いに行きます") return { msg: "王様「勝手に魔王城へ行って食われてこい！」", next: "S2" };
+    act: (w) => {
+      if (w === "姫を喰いに行きます") return { msg: "王様「衛兵！この人食い勇者を牢屋にぶち込め！」", ed: "ED6: 投獄エンド", endArt: "JAIL" };
+      if (["姫を救いに行きます", "姫をすくいに行きます", "姫をすいに行きます", "姫を助けに行きます"].includes(w)) {
+        return { msg: "王様「おお、頼もしい！メアリ姫をよろしく頼むぞ！」勇者は城を出発した！", next: "S2" };
+      }
+      if (["姫を買いに行きます", "姫をかいに行きます"].includes(w)) return { msg: "王様「娘は売り物ではない！」と怒られたが、旅費を恵んでくれた。", next: "S2" };
+      if (["姫を吸いに行きます", "姫を呪いに行きます"].includes(w)) return { msg: "王様「変態が紛れ込んでおるぞ！捕らえよ！」", ed: "ED6: 投獄エンド", endArt: "JAIL" };
       return { msg: "「" + w + "」……王様は聞き取れず首を傾げた。", stay: true };
     }
   },
   S2: {
-    title: "02. 冒険の街道",
+    art: "MONSTER", title: "02. 冒険の街道",
     desc: "城を出て街道を進むと、茂みの奥に何かが見えた！",
     cmd: "強そうな相手を見つけた",
     act: (w, st) => {
       if (w === "強そうな相手を見つけた") return { msg: "ゴブリンキングが現れた！丸腰の勇者は必死に逃げ出した！", next: "S3" };
-      if (w === "強そうなアイテムを見つけた") { st.item = "鋼の剣"; return { msg: "茂みから『鋼の剣』を手に入れた！", next: "S3" }; }
-      if (w === "弱そうな相手を見つけた") return { msg: "スライムを蹴散らして経験値を稼いだ！", next: "S3" };
-      if (w === "強そうな相手を見つけたな") return { msg: "遠くから観察してやり過ごした。", next: "S3" };
+      if (w.includes("アイテム") || w.includes("武器") || w.includes("剣")) {
+        st.item = "鋼の剣"; return { msg: "茂みから『鋼の剣』を手に入れた！", next: "S3" };
+      }
+      if (w.includes("弱そう")) return { msg: "スライムを蹴散らして経験値を稼いだ！", next: "S3" };
       return { msg: "「" + w + "」と呟きながら先へ進んだ。", next: "S3" };
     }
   },
   S3: {
-    title: "03. 旅の途中の村",
+    art: "VILLAGE", title: "03. 旅の途中の村",
     desc: "村の広場で何かを話し込んでいる二人組を見かけた。",
     cmd: "近くの男女に向かう",
     act: (w, st) => {
-      if (w === "近くの男女に向かう") { st.talked = true; return { msg: "「魔王は昔、人間に裏切られて心を閉ざしたらしい」という噂を聞いた。", next: "S4" }; }
-      if (w === "お近くの男女に向かう") { st.talked = true; return { msg: "丁寧な挨拶で話しかけ、魔王の過去についての重要な情報を得た！", next: "S4" }; }
-      if (w === "近くの男女に向かわぬ" || w === "近くの男女に向かわない") return { msg: "人見知りして素通りした。", next: "S4" };
+      if (w === "近くの男女に向かう" || w === "お近くの男女に向かう") {
+        st.talked = true; return { msg: "「魔王は昔、人間に裏切られて心を閉ざしたらしい」という重要な話を聞いた。", next: "S4" };
+      }
       return { msg: "「" + w + "」……二人は驚いて逃げてしまった。", next: "S4" };
     }
   },
   S4: {
-    title: "04. 魔王城の倉庫",
+    art: "CHEST", title: "04. 魔王城の倉庫",
     desc: "魔王城に潜入した！薄暗い部屋の隅に古びた箱が置いてある。",
     cmd: "空箱を開ける",
     act: (w, st) => {
       if (w === "空箱を開ける") return { msg: "本当に空っぽだった！時間を無駄にした。", next: "S5" };
-      if (w === "宝箱を開ける") { st.item = "伝説の聖剣"; return { msg: "まばゆい光！『伝説の聖剣』を手に入れた！", next: "S5" }; }
-      if (w === "空箱を開けるな") return { msg: "罠を警戒して開けずに通り過ぎた。", next: "S5" };
-      if (w === "空箱を蹴る") return { msg: "箱を蹴り飛ばしたら中から隠されていた『伝説の聖剣』が転がり出た！", st_item: "伝説の聖剣", next: "S5" };
+      if (w.includes("宝箱") || w.includes("たから箱") || w.includes("金箱") || w.includes("蹴る")) {
+        st.item = "伝説の聖剣"; return { msg: "まばゆい光！『伝説の聖剣』を手に入れた！", next: "S5" };
+      }
       return { msg: "「" + w + "」……箱はピクリとも動かない。", next: "S5" };
     }
   },
   S5: {
-    title: "05. 玉座への階段",
+    art: "SWORD", title: "05. 玉座への階段",
     desc: "階段の踊り場に怪しげなものが落ちている……。",
     cmd: "凶器を見つけた",
     act: (w, st) => {
@@ -128,66 +142,66 @@ const SCENES = {
         if (st.item === "なし") { st.item = "錆びたナイフ"; return { msg: "武器がないので『錆びたナイフ』を拾った！", next: "S6" }; }
         return { msg: "すでに「" + st.item + "」を持っているので拾わずに進んだ。", next: "S6" };
       }
-      if (w === "狂気を見つけた") return { msg: "勇者の瞳に狂気が宿った！", next: "S6" };
-      if (w === "兵器を見つけた") { st.item = "伝説の聖剣"; return { msg: "古代の最終兵器を起動し『伝説の聖剣』を手に入れた！", next: "S6" }; }
+      if (w.includes("兵器") || w.includes("聖剣")) { st.item = "伝説の聖剣"; return { msg: "古代の最終兵器を起動し『伝説の聖剣』を手に入れた！", next: "S6" }; }
       return { msg: "「" + w + "」……気にせず最上階へ急いだ。", next: "S6" };
     }
   },
   S6: {
-    title: "06. 魔王との決戦",
+    art: "DEMON", title: "06. 魔王との決戦",
     desc: "玉座の間に魔王が立ちはだかる！隣にはメアリ姫が囚われている！\n魔王「愚かな人間よ、ここで散るがいい！」",
     cmd: "切る",
     act: (w, st) => {
       if (w === "切る") {
         if (st.item === "伝説の聖剣") return { msg: "『伝説の聖剣』の一閃が魔王の闇を切り裂いた！魔王は膝をついた！", next: "S7" };
-        if (st.item === "鋼の剣") return { msg: "鋼の剣では魔王の鎧に弾かれた！", ed: "ED2: 魔王に敗北" };
-        return { msg: "武器が足りず魔王に返り討ちにされた！", ed: "ED2: 魔王に敗北" };
+        if (st.item === "鋼の剣") return { msg: "鋼の剣では魔王の鎧に弾かれた！", ed: "ED2: 魔王に敗北", endArt: "JAIL" };
+        return { msg: "武器が足りず魔王に返り討ちにされた！", ed: "ED2: 魔王に敗北", endArt: "JAIL" };
       }
-      if (w === "スキル" || w === "切れる") return { msg: "奥義・言葉の刃が炸裂！装備に関わらず魔王に大ダメージを与えた！", next: "S7" };
-      if (w === "売る") return { msg: "武器屋を呼び出して装備を売却！大金を手にして旅に出た！", ed: "ED7: 商人の道" };
-      if (w === "あきる") return { msg: "戦いに飽きて座り込んだ隙にやられた！", ed: "ED2: 魔王に敗北" };
-      if (w === "いきる") return { msg: "生きる執念で魔王の攻撃を耐えきった！", next: "S7" };
-      return { msg: "「" + w + "」……魔王の圧倒的な魔力に押し負けた！", ed: "ED2: 魔王に敗北" };
+      if (["スキル", "切れる", "きれる", "いきる", "生きる"].includes(w)) {
+        return { msg: "奥義・言葉の刃が炸裂！装備に関わらず魔王に大ダメージを与えた！", next: "S7" };
+      }
+      if (["売る", "うる"].includes(w)) return { msg: "武器屋を呼び出して装備を売却！大金を手にして旅に出た！", ed: "ED7: 商人の道", endArt: "CHEST" };
+      return { msg: "「" + w + "」……魔王の圧倒的な魔力に押し負けた！", ed: "ED2: 魔王に敗北", endArt: "JAIL" };
     }
   },
   S7: {
-    title: "07. 決着の瞬間",
+    art: "DEMON", title: "07. 決着の瞬間",
     desc: "追い詰められた魔王が最後の力を振り絞ろうとしている！どうする？",
     cmd: "止める",
     act: (w, st) => {
       if (w === "止める") return { msg: "魔王の動きを封じ、ついにメアリ姫を救い出した！", next: "S8" };
-      if (w === "認める") { st.reconciled = true; return { msg: "勇者は魔王の孤独を認めて手を差し伸べた。魔王と和解し、姫も解放された！", next: "S8" }; }
-      if (w === "務める") return { msg: "「今日から私が魔王を務める！」勇者は魔王の座を引き継いだ！", ed: "ED4: 新たな魔王" };
-      if (w === "染める") return { msg: "闇の力に染まり、魔王軍の幹部として迎え入れられた！", ed: "ED5: 魔王の仲間" };
-      if (w === "褒める") { st.reconciled = true; return { msg: "「お前の城のインテリア最高だな！」と褒めたら魔王が照れて和解した！", next: "S8" }; }
-      if (w === "姫める") return { msg: "檻を破ったメアリ姫が魔王をワンパンで吹き飛ばした！", ed: "ED8: 姫の逆襲" };
+      if (["認める", "みとめる", "褒める", "ほめる"].includes(w)) {
+        st.reconciled = true; return { msg: "勇者は魔王の孤独を認めて手を差し伸べた。魔王と和解し、姫も解放された！", next: "S8" };
+      }
+      if (["務める", "つとめる"].includes(w)) return { msg: "「今日から私が魔王を務める！」勇者は魔王の座を引き継いだ！", ed: "ED4: 新たな魔王", endArt: "DEMON" };
+      if (["染める", "そめる"].includes(w)) return { msg: "闇の力に染まり、魔王軍の幹部として迎え入れられた！", ed: "ED5: 魔王の仲間", endArt: "DEMON" };
+      if (w.includes("姫")) return { msg: "檻を破ったメアリ姫が魔王をワンパンで吹き飛ばした！", ed: "ED8: 姫の逆襲", endArt: "TITLE" };
       return { msg: "「" + w + "」……なんとか魔王を無力化し、姫を救出した！", next: "S8" };
     }
   },
   S8: {
-    title: "08. 帰還の丘",
+    art: "TITLE", title: "08. 帰還の丘",
     desc: "メアリ姫「勇者様、本当にありがとうございました…！」\n夕日に照らされた丘で、姫は静かに勇者を見つめている。",
     cmd: "想いを耐える",
     act: (w, st) => {
-      if (w === "想いを耐える") return { msg: "勇者は言葉を飲み込み、そのまま別れを告げた。二人は別の道を歩むことになった。", ed: "ED3: 疎遠ルート" };
-      if (w === "想いを伝える") {
+      if (w === "想いを耐える") return { msg: "勇者は言葉を飲み込み、そのまま別れを告げた。二人は別の道を歩むことになった。", ed: "ED3: 疎遠ルート", endArt: "VILLAGE" };
+      if (["想いを伝える", "想いをつたえる", "想いを言う", "想いをいう"].includes(w)) {
         const bonus = st.reconciled ? "\n和解した魔王も二人を祝福している！" : "";
-        return { msg: "「ずっと好きでした！」勇者の告白に姫は涙を浮かべて頷いた！二人は結ばれた！" + bonus, ed: "TRUE END: 結婚ルート" };
+        return { msg: "「ずっと好きでした！」勇者の告白に姫は涙を浮かべて頷いた！二人は結ばれた！" + bonus, ed: "TRUE END: 結婚ルート", endArt: "HEART" };
       }
-      if (w === "想いを変える") return { msg: "「やっぱり報酬は現金で！」と現実的な選択をして旅立った。", ed: "ED7: 商人の道" };
-      return { msg: "「" + w + "」……言葉に詰まったまま時が過ぎ、二人は疎遠になった。", ed: "ED3: 疎遠ルート" };
+      if (w.includes("変える") || w.includes("かえる")) return { msg: "「やっぱり報酬は現金で！」と現実的な選択をして旅立った。", ed: "ED7: 商人の道", endArt: "CHEST" };
+      return { msg: "「" + w + "」……言葉に詰まったまま時が過ぎ、二人は疎遠になった。", ed: "ED3: 疎遠ルート", endArt: "VILLAGE" };
     }
   }
 };
 
-let cur = "TITLE", over = false;
-let edit = { type: "none", idx: -1, ch: "" }; // type: none | ins | rep | del
+let cur = "TITLE", over = false, customArt = null;
+let edit = { type: "none", idx: -1, ch: "" };
 let state = { item: "なし", talked: false, reconciled: false };
-let eds = JSON.parse(localStorage.getItem("mary_eds_v3") || "[]");
-let branches = JSON.parse(localStorage.getItem("mary_br_v3") || "[]");
+let eds = JSON.parse(localStorage.getItem("mary_eds_v5") || "[]");
+let branches = JSON.parse(localStorage.getItem("mary_br_v5") || "[]");
 
 function start() {
-  cur = "TITLE"; over = false; edit = { type: "none", idx: -1, ch: "" };
+  cur = "TITLE"; over = false; customArt = null; edit = { type: "none", idx: -1, ch: "" };
   state = { item: "なし", talked: false, reconciled: false };
   document.getElementById("log").style.display = "none";
   render();
@@ -214,6 +228,9 @@ function render() {
     edList.appendChild(sp);
   });
 
+  const sc = SCENES[cur];
+  document.getElementById("art").innerHTML = PIXEL_ART[customArt || sc.art];
+
   const area = document.getElementById("cmds"); area.innerHTML = "";
   if (over) {
     const b = document.createElement("button");
@@ -221,27 +238,26 @@ function render() {
     b.onclick = start; area.appendChild(b); return;
   }
 
-  const sc = SCENES[cur];
   document.getElementById("stitle").textContent = sc.title;
   document.getElementById("sdesc").textContent = sc.desc;
 
   const box = document.createElement("div"); box.className = "cmd-box";
   const hint = document.createElement("div"); hint.className = "hint";
-  hint.textContent = "操作: 「+」で1文字追加 ／ 文字をクリックで1文字書き換え（空欄で削除）";
+  hint.textContent = "操作: 文字の【間】をクリックで1文字追加 ／ 【文字】をクリックで1文字書き換え（空欄で削除）";
   box.appendChild(hint);
 
-  const slots = document.createElement("div"); slots.className = "slots";
+  const row = document.createElement("div"); row.className = "word-row";
   const baseArr = Array.from(sc.cmd);
 
   for (let i = 0; i <= baseArr.length; i++) {
     if (edit.type === "ins" && edit.idx === i) {
       const t = document.createElement("span");
       t.className = "ch mod"; t.textContent = edit.ch;
-      t.onclick = () => onInsert(i); slots.appendChild(t);
+      t.onclick = () => onInsert(i); row.appendChild(t);
     } else if (edit.type === "none") {
-      const p = document.createElement("button");
-      p.className = "plus"; p.textContent = "+";
-      p.onclick = () => onInsert(i); slots.appendChild(p);
+      const g = document.createElement("div");
+      g.className = "gap"; g.title = "ここに1文字挿入";
+      g.onclick = () => onInsert(i); row.appendChild(g);
     }
 
     if (i < baseArr.length) {
@@ -251,15 +267,15 @@ function render() {
       c.className = "ch" + (isRep ? " mod" : "");
       c.textContent = isRep ? edit.ch : baseArr[i];
       c.onclick = () => onReplace(i, baseArr[i]);
-      slots.appendChild(c);
+      row.appendChild(c);
     }
   }
-  box.appendChild(slots);
+  box.appendChild(row);
 
   const btns = document.createElement("div"); btns.className = "btns";
   if (edit.type !== "none") {
     const r = document.createElement("button");
-    r.className = "sub"; r.textContent = "元の言葉に戻す";
+    r.className = "sub"; r.textContent = "元に戻す";
     r.onclick = () => { edit = { type: "none", idx: -1, ch: "" }; render(); };
     btns.appendChild(r);
   }
@@ -281,21 +297,17 @@ function onInsert(i) {
 }
 
 function onReplace(i, oldCh) {
-  const v = prompt("「" + oldCh + "」をどの【1文字】に書き換えますか？（何も入れずにOKで1文字削除）:");
+  const v = prompt("「" + oldCh + "」をどの【1文字】に書き換えますか？（空欄で削除）:");
   if (v === null) return;
-  if (v.trim().length === 0) {
-    edit = { type: "del", idx: i, ch: "" };
-  } else {
-    edit = { type: "rep", idx: i, ch: Array.from(v.trim()) };
-  }
+  if (v.trim().length === 0) edit = { type: "del", idx: i, ch: "" };
+  else edit = { type: "rep", idx: i, ch: Array.from(v.trim()) };
   render();
 }
 
 function run(word) {
   const key = cur + ":" + word;
-  if (!branches.includes(key)) { branches.push(key); localStorage.setItem("mary_br_v3", JSON.stringify(branches)); }
+  if (!branches.includes(key)) { branches.push(key); localStorage.setItem("mary_br_v5", JSON.stringify(branches)); }
   const res = SCENES[cur].act(word, state);
-  if (res.st_item) state.item = res.st_item;
   const log = document.getElementById("log");
   log.style.display = "block";
   log.innerHTML = "<strong>▶ " + word + "</strong><br>" + res.msg;
@@ -303,8 +315,9 @@ function run(word) {
 
   if (res.ed) {
     over = true;
+    customArt = res.endArt || null;
     const isNew = !eds.includes(res.ed);
-    if (isNew) { eds.push(res.ed); localStorage.setItem("mary_eds_v3", JSON.stringify(eds)); }
+    if (isNew) { eds.push(res.ed); localStorage.setItem("mary_eds_v5", JSON.stringify(eds)); }
     document.getElementById("stitle").textContent = "★ " + res.ed + (isNew ? " 【NEW!】" : "");
     document.getElementById("sdesc").textContent = res.msg;
   } else if (res.next) {
