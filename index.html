@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MR. MIX - RECREATION</title>
+<style>
+  body { background-color: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; padding-top: 50px; }
+  #game-box { border: 2px solid #0f0; width: 500px; margin: 0 auto; padding: 20px; background: #050505; }
+  #target-word { font-size: 32px; letter-spacing: 4px; margin: 20px 0; color: #fff; }
+  input { background: #111; border: 1px solid #0f0; color: #0f0; font-size: 24px; padding: 5px; text-align: center; width: 80%; outline: none; }
+  .glitch { color: #f00 !important; text-shadow: 2px 0 #00f, -2px 0 #0f0; }
+</style>
+</head>
+<body>
+
+<div id="game-box">
+  <h1 id="title">MR. MIX</h1>
+  <p>LEVEL: <span id="level">1</span> | TIME: <span id="timer">10.0</span>s</p>
+  <div id="target-word">MIX</div>
+  <input type="text" id="input-box" autofocus autocomplete="off">
+  <p id="message">TYPE THE INGREDIENT TO COOK</p>
+</div>
+
+<script>
+  const words = [
+    ["MIX", "EGG", "MILK", "SALT", "FLOUR"],
+    ["SUGAR", "BUTTER", "CREAM", "BAKE", "STIR"],
+    ["OVEN", "SPOON", "BOWL", "WHISK", "HEAT"],
+    ["SCREAM", "NOISE", "DARK", "WATCH", "RUN"],
+    ["84EC", "BLEED", "STATIC", "ERROR", "HELP"]
+  ];
+
+  let level = 1;
+  let wordIndex = 0;
+  let timeLeft = 10.0;
+  let timerId;
+
+  const targetEl = document.getElementById("target-word");
+  const inputEl = document.getElementById("input-box");
+  const levelEl = document.getElementById("level");
+  const timerEl = document.getElementById("timer");
+  const titleEl = document.getElementById("title");
+  const msgEl = document.getElementById("message");
+
+  function startLevel() {
+    wordIndex = 0;
+    timeLeft = Math.max(3.0, 11.0 - level * 1.5);
+    levelEl.textContent = level;
+    nextWord();
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+      timeLeft -= 0.1;
+      timerEl.textContent = timeLeft.toFixed(1);
+      if (timeLeft <= 0) {
+        clearInterval(timerId);
+        triggerGameOver();
+      }
+    }, 100);
+  }
+
+  function nextWord() {
+    if (wordIndex >= words[level - 1].length) {
+      level++;
+      if (level > words.length) {
+        clearInterval(timerId);
+        targetEl.textContent = "COMPLETE...?";
+        targetEl.classList.add("glitch");
+        inputEl.disabled = true;
+        return;
+      }
+      startLevel();
+      return;
+    }
+    targetEl.textContent = words[level - 1][wordIndex];
+    inputEl.value = "";
+    if (level >= 4) {
+      titleEl.classList.add("glitch");
+      msgEl.textContent = "FASTER. FASTER. FASTER.";
+    }
+  }
+
+  function triggerGameOver() {
+    document.body.style.backgroundColor = "#300";
+    targetEl.textContent = "TOO SLOW";
+    targetEl.classList.add("glitch");
+    inputEl.disabled = true;
+  }
+
+  inputEl.addEventListener("input", () => {
+    if (inputEl.value.toUpperCase() === targetEl.textContent) {
+      wordIndex++;
+      nextWord();
+    }
+  });
+
+  startLevel();
+</script>
+</body>
+</html>
